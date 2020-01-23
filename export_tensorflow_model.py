@@ -1,9 +1,13 @@
+import os
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-i","--inputfile", type=str, help="inputfile", required=True)
-parser.add_argument("-o","--outputdir", type=str, help="outputdir", required=True)
-parser.add_argument("-n","--name", type=str, help="name", required=True)
+parser.add_argument("-d",  "--dir", type=str, help="base directory", required=True)
+parser.add_argument("-i",  "--input", type=str, help="inputfile", required=True)
+parser.add_argument("-o",  "--output", type=str, help="name", required=True)
+parser.add_argument("-m",  "--tf_metadata", type=str, help="tf metadata file", default="tf_metadata.txt")
+parser.add_argument("-is", "--input_scaler", type=str, help="input path to scaler file")
+parser.add_argument("-os", "--output_scaler", type=str, help="name for output scaler file")
 args = parser.parse_args()
 
 from keras import backend as K
@@ -11,9 +15,9 @@ from keras import backend as K
 K.set_learning_phase(0)
 
 from keras.models import load_model
-model = load_model(args.inputfile)
-print("output tensors: ", model.outputs)
-print("input tensors: ", model.inputs)
+model = load_model(os.path.join(args.dir, args.input))
+print("output tensors: ", model.outputs[0].name)
+print("input tensors: ", model.inputs[0].name)
 
 from keras import backend as K
 import tensorflow as tf
@@ -53,6 +57,37 @@ frozen_graph = freeze_session(K.get_session(),
                               output_names=[out.op.name for out in model.outputs])
 
 # Save to ./model/tf_model.pb
-tf.train.write_graph(frozen_graph, args.outputdir, args.name, as_text=False)
+tf.train.write_graph(frozen_graph, args.dir, args.output, as_text=False)
+
+## save tensorflow metadata
+with open(os.path.join(args.dir, args.tf_metadata), "w") as f:
+    f.write(str(model.inputs[0].name) + " " + str(model.outputs[0].name) + "\n")
+
+
+## Export 
+## * tf tensor input name and output name
+## * scaler mean_ and scale_ (where scale_ = np.sqrt(var_)) for each variable
+##
+import os
+import pickle
+
+import yaml
+yaml_vars = yaml.safe_load(open(os.path.join(args.dir, "variables.yml"), "r"))
+print(type(yaml_vars), yaml_vars)
+
+def export_scaler():
+    if args.input_scaler:
+        if not args.output_scaler:
+            print("no output_scaler parameter provided")
+            return
+        scaler = pickle.load(open(os.path.join(args.dir, args.input_scaler), 'rb'))
+        print(scaler.mean_)
+        print(scaler.scale_)
+        with open(os.path.join(args.dir, args.output_scaler), "w") as f:
+            for var, mean, scale in zip(yaml_vars, scaler.mean_, scaler.scale_):
+                f.write(var + " " + str(mean) + " " + str(scale) + "\n")
+
+
+export_scaler()
 
 print("done")
