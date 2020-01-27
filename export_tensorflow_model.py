@@ -1,13 +1,27 @@
+'''
+parameter: 
+- dir
+- dir/variables.yml (automatic == hardcoded filename)
+
+input:
+- input
+- input_scaler
+
+output:
+- output
+- output_scaler
+'''
+
 import os
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-d",  "--dir", type=str, help="base directory", required=True)
-parser.add_argument("-i",  "--input", type=str, help="inputfile", required=True)
-parser.add_argument("-o",  "--output", type=str, help="name", required=True)
-parser.add_argument("-m",  "--tf_metadata", type=str, help="tf metadata file", default="tf_metadata.txt")
-parser.add_argument("-is", "--input_scaler", type=str, help="input path to scaler file")
-parser.add_argument("-os", "--output_scaler", type=str, help="name for output scaler file")
+parser.add_argument("-d",  "--dir", type=str, help="base directory for every file", required=True)
+parser.add_argument("-i",  "--input", type=str, help="input keras model", required=True)
+parser.add_argument("-o",  "--output", type=str, help="output tensorflow model", required=True)
+parser.add_argument("-m",  "--tf_metadata", type=str, help="output tf metadata file", default="tf_metadata.txt")
+parser.add_argument("-is", "--input_scaler", type=str, help="input scaler file")
+parser.add_argument("-os", "--output_scaler", type=str, help="output scaler file")
 args = parser.parse_args()
 
 from keras import backend as K
@@ -81,8 +95,6 @@ def export_scaler():
             print("no output_scaler parameter provided")
             return
         scaler = pickle.load(open(os.path.join(args.dir, args.input_scaler), 'rb'))
-        print(scaler.mean_)
-        print(scaler.scale_)
         with open(os.path.join(args.dir, args.output_scaler), "w") as f:
             for var, mean, scale in zip(yaml_vars, scaler.mean_, scaler.scale_):
                 f.write(var + " " + str(mean) + " " + str(scale) + "\n")
