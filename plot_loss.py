@@ -38,6 +38,7 @@ class PlotLosses(keras.callbacks.Callback):
         self.dnn_score_plot = []
         self.dnn_score_log = []
         self.kstest_log = []
+        self.figure = None
         
         self.logs = []
 
@@ -51,7 +52,7 @@ class PlotLosses(keras.callbacks.Callback):
         self.acc.append(logs.get('acc')) #training_loss[1])
         self.val_acc.append(logs.get('val_acc'))
         self.i += 1
-        f, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(24,8))
+        self.figure, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(24,8))
         clear_output(wait=True)
 
         # ax1.set_yscale('log')
@@ -73,8 +74,8 @@ class PlotLosses(keras.callbacks.Callback):
         bins=25
         ax4.hist(pred_train[self.y_train==0],weights=self.W_train[self.y_train==0], bins=bins, density=True, label="false - train", histtype="step")
         ax4.hist(pred_train[self.y_train==1],weights=self.W_train[self.y_train==1], bins=bins, density=True, label="true - train", histtype="step")
-        dnnout_false = ax4.hist(pred_test[self.y_test==0],weights=self.W_test[self.y_test==0], bins=bins,density=True, label="false - test+val", histtype="step")
-        dnnout_true  = ax4.hist(pred_test[self.y_test==1],weights=self.W_test[self.y_test==1], bins=bins, density=True, label="true - test+val", histtype="step")
+        dnnout_false = ax4.hist(pred_test[self.y_test==0],weights=self.W_test[self.y_test==0], bins=bins,density=True, label="false - test", histtype="step")
+        dnnout_true  = ax4.hist(pred_test[self.y_test==1],weights=self.W_test[self.y_test==1], bins=bins, density=True, label="true - test", histtype="step")
         ax4.legend()
 
         rtest  = [x[0] for x in pred_test[self.y_test==1]]
@@ -97,4 +98,7 @@ class PlotLosses(keras.callbacks.Callback):
         
         self.dnn_score_plot.append((dnnout_false,dnnout_true))
         
-        plt.show();
+        plt.show()
+
+    def save_figure(self, fname):
+        self.figure.savefig(fname)

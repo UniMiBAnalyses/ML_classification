@@ -30,6 +30,91 @@ def get_model(model_tag, input_dim):
                     loss='binary_crossentropy',
                     metrics=['accuracy'])
 
+    if model_tag == "res_3depth_v0":
+        model.add(Dense(100, input_dim=input_dim, activation="relu"))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.1))
+
+        model.add(Dense(80))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(30))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(1, activation="sigmoid"))
+
+        #model.add(Dropout(0.05))
+        #model.add(Dense(50, activation="relu"))
+
+        model.compile(optimizer='adam',
+                    loss='binary_crossentropy',
+                    metrics=['accuracy'])
+
+    if model_tag == "res_3depth_v1":
+        model.add(Dense(50, input_dim=input_dim, activation="relu"))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.1))
+
+        model.add(Dense(80))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(30))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(1, activation="sigmoid"))
+
+        #model.add(Dropout(0.05))
+        #model.add(Dense(50, activation="relu"))
+
+        model.compile(optimizer='adam',
+                    loss='binary_crossentropy',
+                    metrics=['accuracy'])
+
+    if model_tag == "res_5depth_v0":
+        model.add(Dense(50, input_dim=input_dim, activation="relu"))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.1))
+
+        model.add(Dense(80))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(100))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(80))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(50))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.03))
+
+        model.add(Dense(1, activation="sigmoid"))
+
+        #model.add(Dropout(0.05))
+        #model.add(Dense(50, activation="relu"))
+
+        model.compile(optimizer='adam',
+                    loss='binary_crossentropy',
+                    metrics=['accuracy'])
+
     # if id=="multi_small":
     #     model.add(Dense(units=100,input_dim=input_dim, activation="relu"))
     #     model.add(Dropout(0.2))
