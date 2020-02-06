@@ -80,6 +80,31 @@ def get_model(model_tag, input_dim):
                     loss='binary_crossentropy',
                     metrics=['accuracy'])
 
+    if model_tag == "res_3depth_v2":
+        model.add(Dense(50, input_dim=input_dim, activation="relu"))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.1))
+
+        model.add(Dense(100))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.3))
+
+        model.add(Dense(30))
+        model.add(BatchNormalization())
+        model.add(Activation("relu"))
+        model.add(Dropout(0.2))
+
+        model.add(Dense(1, activation="sigmoid"))
+
+        #model.add(Dropout(0.05))
+        #model.add(Dense(50, activation="relu"))
+
+        model.compile(optimizer='adam',
+                    loss='binary_crossentropy',
+                    metrics=['accuracy'])
+
     if model_tag == "res_5depth_v0":
         model.add(Dense(50, input_dim=input_dim, activation="relu"))
         model.add(BatchNormalization())
