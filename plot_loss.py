@@ -79,10 +79,10 @@ class PlotLosses(keras.callbacks.Callback):
 
         # pred_train = self.model.predict(self.X_train, batch_size=2048)
         bins=25
-        ax4.hist(pred_train[self.y_train==0],weights=self.W_train[self.y_train==0], bins=bins, density=True, label="bkg (train)", histtype="step")
-        ax4.hist(pred_train[self.y_train==1],weights=self.W_train[self.y_train==1], bins=bins, density=True, label="sig (train)", histtype="step")
+        ax4.hist(pred_train[self.y_train==0],weights=self.W_train[self.y_train==0], bins=bins, range=(0.,1.), density=True, label="bkg (train)", histtype="step")
+        ax4.hist(pred_train[self.y_train==1],weights=self.W_train[self.y_train==1], bins=bins, range=(0.,1.), density=True, label="sig (train)", histtype="step")
         dnnout_false = ax4.hist(pred_test[self.y_test==0],weights=self.W_test[self.y_test==0], bins=bins,density=True, label="bkg (val)", histtype="step")
-        dnnout_true  = ax4.hist(pred_test[self.y_test==1],weights=self.W_test[self.y_test==1], bins=bins, density=True, label="sing (val)", histtype="step")
+        dnnout_true  = ax4.hist(pred_test[self.y_test==1],weights=self.W_test[self.y_test==1], bins=bins, density=True, label="sig (val)", histtype="step")
         ax4.legend()
 
         rtest  = [x[0] for x in pred_test[self.y_test==1]]
@@ -91,7 +91,9 @@ class PlotLosses(keras.callbacks.Callback):
         self.kstest_log.append(kstest_pval[1])
         print("KS test (dnn output: sig (train) vs sig (val))", kstest_pval, ". good: ", kstest_pval[1] > 0.05)
         ax5.plot(self.x, self.kstest_log, "o-", label="sig (train) vs sig (val). kstest pval")
+        ax5.plot((self.x[0], self.x[-1]), (0.05, 0.05), 'k-')
         ax5.legend()
+        ax5.set_yscale('log')
 
         #print(self.y_train.shape, self.y_train[self.y_train==1].shape, self.y_train[self.y_train==0].shape,)
         #print(self.X_train.shape, )
