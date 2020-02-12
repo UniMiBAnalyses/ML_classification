@@ -24,7 +24,8 @@ class PlotLosses(keras.callbacks.Callback):
         self.y_test = data["y_test"]
         self.W_train = data["W_train"]
         self.W_test = data["W_test"]
-
+        self.Wnn_train = data["Wnn_train"]
+        self.Wnn_test = data["Wnn_test"]
 
     def on_train_begin(self, logs={}):
         self.i = 0
@@ -38,7 +39,8 @@ class PlotLosses(keras.callbacks.Callback):
         self.auc_test = []
         self.dnn_score_plot = []
         self.dnn_score_log = []
-        self.kstest_log = []
+        self.kstest_sig = []
+        self.kstest_bkg = []
         self.significance_test = []
         self.significance_train = []
         self.figure = None
@@ -61,10 +63,12 @@ class PlotLosses(keras.callbacks.Callback):
         # ax1.set_yscale('log')
         ax1.plot(self.x, self.losses, "o-", label="loss (train)")
         ax1.plot(self.x, self.val_losses, "o-", label="loss (val)")
+        ax1.set_xlabel("epochs")
         ax1.legend()
         
         ax2.plot(self.x, self.acc, "o-", label="accuracy (train)")
         ax2.plot(self.x, self.val_acc, "o-", label="accuracy (val)")
+        ax2.set_xlabel("epochs")
         ax2.legend()
         
         pred_test = self.model.predict(self.X_test, batch_size=2048)
@@ -75,44 +79,51 @@ class PlotLosses(keras.callbacks.Callback):
         self.auc_train.append(auc_w_train)
         ax3.plot(self.x, self.auc_train, "o-", label="auc (train)")
         ax3.plot(self.x, self.auc_test, "o-", label="auc (val)")
+        ax3.set_xlabel("epochs")
         ax3.legend()
 
         # pred_train = self.model.predict(self.X_train, batch_size=2048)
         bins=25
         ax4.hist(pred_train[self.y_train==0],weights=self.W_train[self.y_train==0], bins=bins, range=(0.,1.), density=True, label="bkg (train)", histtype="step")
         ax4.hist(pred_train[self.y_train==1],weights=self.W_train[self.y_train==1], bins=bins, range=(0.,1.), density=True, label="sig (train)", histtype="step")
-        dnnout_false = ax4.hist(pred_test[self.y_test==0],weights=self.W_test[self.y_test==0], bins=bins,density=True, label="bkg (val)", histtype="step")
-        dnnout_true  = ax4.hist(pred_test[self.y_test==1],weights=self.W_test[self.y_test==1], bins=bins, density=True, label="sig (val)", histtype="step")
+        dnnout_false = ax4.hist(pred_test[self.y_test==0],weights=self.W_test[self.y_test==0], bins=bins, range=(0.,1.), density=True, label="bkg (val)", histtype="step")
+        dnnout_true  = ax4.hist(pred_test[self.y_test==1],weights=self.W_test[self.y_test==1], bins=bins, range=(0.,1.), density=True, label="sig (val)", histtype="step")
+        ax4.set_xlabel("DNN output")
         ax4.legend()
 
-        rtest  = [x[0] for x in pred_test[self.y_test==1]]
-        rtrain = [x[0] for x in pred_train[self.y_train==1]]
-        kstest_pval = stats.ks_2samp(rtrain, rtest) # (statistics, pvalue)
-        self.kstest_log.append(kstest_pval[1])
-        print("KS test (dnn output: sig (train) vs sig (val))", kstest_pval, ". good: ", kstest_pval[1] > 0.05)
-        ax5.plot(self.x, self.kstest_log, "o-", label="sig (train) vs sig (val). kstest pval")
+        pred_train = pred_train.flatten()
+        pred_test = pred_test.flatten()
+
+        kstest_pval_sig = stats.ks_2samp(pred_train[self.y_train==1], pred_test[self.y_test==1]) # (statistics, pvalue)
+        self.kstest_sig.append(kstest_pval_sig[1])
+        kstest_pval_bkg = stats.ks_2samp(pred_train[self.y_train==0], pred_test[self.y_test==0]) # (statistics, pvalue)
+        self.kstest_bkg.append(kstest_pval_bkg[1])
+        print("KS test (dnn output: sig (train) vs sig (val))", kstest_pval_sig, ". good: ", kstest_pval_sig[1] > 0.05)
+        print("KS test (dnn output: bkg (train) vs bkg (val))", kstest_pval_bkg, ". good: ", kstest_pval_bkg[1] > 0.05)
+        ax5.plot(self.x, self.kstest_sig, "o-", label="sig (train) vs sig (val). kstest pval")
+        ax5.plot(self.x, self.kstest_bkg, "o-", label="bkg (train) vs bkg (val). kstest pval")
         ax5.plot((self.x[0], self.x[-1]), (0.05, 0.05), 'k-')
         ax5.legend()
+        ax5.set_xlabel("epochs")
         ax5.set_yscale('log')
 
         #print(self.y_train.shape, self.y_train[self.y_train==1].shape, self.y_train[self.y_train==0].shape,)
         #print(self.X_train.shape, )
         # s_great_train_mask = (self.y_train==1) & (pred_train[self.y_train==1] > 0.8)
-        pred_train = pred_train.flatten()
-        pred_test = pred_test.flatten()
         print("train", self.X_train.shape, self.y_train.shape, self.W_train.shape, pred_train.shape )
         #print("pred", pred_train[self.y_train==1].shape, len(pred_train[self.y_train==1]) )
         #print("W", self.W_train[self.y_train==1].shape)
         #s_tot = np.zeros(len(pred_train))
         dnnout_cut = 0.8
-        s_geq_train = np.ones(len(self.y_train[(self.y_train==1) & (pred_train > dnnout_cut)])) * self.W_train[(self.y_train==1) & (pred_train > dnnout_cut)]
-        b_geq_train = np.ones(len(self.y_train[(self.y_train==0) & (pred_train > dnnout_cut)])) * self.W_train[(self.y_train==0) & (pred_train > dnnout_cut)]
+        s_geq_train = self.Wnn_train[(self.y_train==1) & (pred_train > dnnout_cut)]
+        b_geq_train = self.Wnn_train[(self.y_train==0) & (pred_train > dnnout_cut)]
         significance_train = ( s_geq_train.sum() ) / (np.sqrt( b_geq_train.sum() ))
         self.significance_train.append(significance_train)
         ax6.plot(self.x, self.significance_train, "o-", color="blue")
         ax6.set_ylabel("S / sqrt(B) (train)", color='blue')
-        s_geq_test = np.ones(len(self.y_test[(self.y_test==1) & (pred_test > dnnout_cut)])) * self.W_test[(self.y_test==1) & (pred_test > dnnout_cut)]
-        b_geq_test = np.ones(len(self.y_test[(self.y_test==0) & (pred_test > dnnout_cut)])) * self.W_test[(self.y_test==0) & (pred_test > dnnout_cut)]
+        ax6.set_xlabel("epochs")
+        s_geq_test = self.Wnn_test[(self.y_test==1) & (pred_test > dnnout_cut)]
+        b_geq_test = self.Wnn_test[(self.y_test==0) & (pred_test > dnnout_cut)]
         significance_test = ( s_geq_test.sum() ) / (np.sqrt( b_geq_test.sum() ))
         self.significance_test.append(significance_test)
         ax7 = ax6.twinx()
