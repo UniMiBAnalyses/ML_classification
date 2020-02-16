@@ -204,8 +204,11 @@ class VbsDnn():
         self.fit()
         logging.debug("Saving training metadata")
         self.save_metadata()
-        logging.info("Result:  {}".format(self._train_monitor.significance_test[-1]))
-        return self._train_monitor.significance_test[-1]
+        result = self._train_monitor.val_losses[-1] +  abs(self._train_monitor.losses[-1] - self._train_monitor.val_losses[-1] )
+        if self._train_monitor.kstest_sig[-1] < 0.05 or self._train_monitor.kstest_bkg[-1] < 0.05:
+            result +=  - np.log(min(self._train_monitor.kstest_sig[-1],self._train_monitor.kstest_bkg[-1])) 
+        logging.info("Result:  {}".format(result))
+        return result
 
 ###############################################################################
 
@@ -254,4 +257,4 @@ def evaluate_vbsdnn_model(config, fixed_params, x):
         patience = patience
     )
     evaluation = _vbs_dnn.evaluate_loss()
-    return evaluation
+    return evaluation, _vbs_dnn
