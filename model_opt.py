@@ -237,6 +237,9 @@ def evaluate_vbsdnn_model(config, fixed_params, x):
     batch_norm = bool(x[:,4])
     input_dim = int(x[:,5])
 
+    if n_nodes < input_dim:
+        n_nodes = input_dim
+
     epochs     =fixed_params["epochs"]
     test_ratio  =fixed_params["test_ratio"]
     val_ratio  =fixed_params["val_ratio"]
