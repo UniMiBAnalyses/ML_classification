@@ -1,18 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
 import logging
 from telegramBot import TelegramLog
 
-logging.getLogger().setLevel(logging.INFO)
-log = logging.getLogger()
-#for hdlr in log.handlers[:]:  # remove all old handlers
-#    log.removeHandler(hdlr)
-fileh = logging.FileHandler('/storage/vbsjjlnu/log.txt', 'a')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fileh.setFormatter(formatter)
-log.addHandler(fileh)
 import model_opt
 
 import argparse
@@ -26,15 +17,20 @@ parser.add_argument('-n', '--n-iter', type=int, required=True, default=10)
 parser.add_argument('-b', '--bot-config', type=str, required=True)
 args = parser.parse_args()
 
+logging.getLogger().setLevel(logging.INFO)
+log = logging.getLogger()
+#for hdlr in log.handlers[:]:  # remove all old handlers
+#    log.removeHandler(hdlr)
+fileh = logging.FileHandler('/storage/vbsjjlnu/log.txt', 'a')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fileh.setFormatter(formatter)
+log.addHandler(fileh)
 
 bot = TelegramLog(args.bot_config)
 log.addHandler(bot)
 
 
 logging.info("=================================== Starting new training")
-
-# In[83]:
-
 
 config = {
     "base_dir":        "/storage/vbsjjlnu",
@@ -58,14 +54,12 @@ bounds = [{'name': 'batch_size', 'type': 'discrete',  'domain': (2048, 4096)},
           {'name': 'input_dim', 'type': 'discrete',  'domain': tuple(list(range(4,len(config["cols"])+1) ))},
          ]
 
-
 fixed_params={
     "epochs": 200,
-    "val_ratio": 0.35,
+    "val_ratio": 0.5,
     "test_ratio": 0.1,
     "patience": (0.0001, 20)
 }
-
 
 ## optimizer function
 def f(x):
