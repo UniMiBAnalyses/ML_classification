@@ -198,15 +198,40 @@ class VbsDnn():
 
     def evaluate_loss(self):
         '''
-        evaluate the model based on the loss on the training set
+        evaluate the model computing the score with 
+        * the loss on the training set (the lower, the better. [0,1], usually ~0.6)
+        * the difference between the loss on the training and validation dataset (the smaller, the better. )
+        * the -log() of the pvalue of the kolmogorov test, if pval < 0.05 (better if non-existing)
+        * the auc (the higher the better)
+        we want to minimize the score
         '''
         logging.debug("Start Training")
         self.fit()
         logging.debug("Saving training metadata")
         self.save_metadata()
-        result = self._train_monitor.val_losses[-1] +  abs(self._train_monitor.losses[-1] - self._train_monitor.val_losses[-1] )
-        if self._train_monitor.kstest_sig[-1] < 0.05 or self._train_monitor.kstest_bkg[-1] < 0.05:
-            result +=  - np.log(min(self._train_monitor.kstest_sig[-1],self._train_monitor.kstest_bkg[-1])) 
+        ## we want a score to _minimize_
+        ## the evaluation is based on the value of the loss
+        score_loss  = self._train_monitor.val_losses[-1] 
+        ## then we want to increase the score if the model overfits
+        ## we add the difference between validation and training loss
+        score_loss_ot = abs(self._train_monitor.losses[-1] - self._train_monitor.val_losses[-1] )
+        ## we want to penalize the models for which the kolmogorov test fails
+        ## if the test fail badly, the pval is for example 10*-15 or smaller: we add the -log, in this case +15
+        ## then, we reduce this factor not to train _only_ on the kolmogorov test, but to give some importance to other factors
+        score_ktest = 0.
+        ## if self._train_monitor.kstest_sig[-1] < 0.05 or self._train_monitor.kstest_bkg[-1] < 0.05:
+        #    score_ktest =  - 0.2 * np.log(min(self._train_monitor.kstest_sig[-1],self._train_monitor.kstest_bkg[-1])) 
+        ## we want also to consider the auc. We want to encourage model with high auc
+        ## we add (1-auc), with a factor to increase its importance
+        score_auc    = - 1. / (1 - self._train_monitor.auc_test[-1])
+        # as with loss, penalize if overtraining affects the auc
+        score_auc_ot = abs(self._train_monitor.auc_train[-1] - self._train_monitor.auc_test[-1])
+        logging.info(" - loss: " + score_loss)
+        logging.info(" - loss_ot: " + score_loss_ot)
+        logging.info(" - ktest: " + score_ktest)
+        logging.info(" - auc: " + score_auc)
+        logging.info(" - auc_ot: " + score_auc_ot)
+        result = score_loss + score_loss_ot + score_ktest + score_auc + score_auc_ot
         logging.info("Result:  {}".format(result))
         return result
 

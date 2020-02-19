@@ -69,7 +69,14 @@ def f(x):
     return ev
 
 logging.info("Initialization")
-optimizer = GPyOpt.methods.BayesianOptimization(f=f, domain=bounds)
+# try this acquisition type
+# https://nbviewer.jupyter.org/github/SheffieldML/GPyOpt/blob/master/manual/GPyOpt_scikitlearn.ipynb
+optimizer = GPyOpt.methods.BayesianOptimization(f=f, 
+                                                domain=bounds,
+                                                acquisition_type ='EI',       # MPI acquisition
+                                                acquisition_weight = 0.2,   # Exploration exploitation
+                                                jitter=0.1,
+                                                )
 
 logging.info(f"Running {args.n_iter} optimization")
 optimizer.run_optimization(max_iter=args.n_iter)
@@ -88,7 +95,10 @@ with open(os.path.join(report_dir, f"{timeid}_best_params.txt"), "a") as of:
 
 optimizer.save_evaluations(os.path.join(report_dir, f"{timeid}_baysian_model_saveopt.txt"))
 optimizer.save_report(os.path.join(report_dir, f"{timeid}_baysian_model_report.txt"))
-
+# optimizer.plot_acquisition(filename=os.path.join(report_dir, f"{timeid}_baysian_model_acquisition.png"))
+optimizer.plot_convergence(filename=os.path.join(report_dir, f"{timeid}_baysian_model_convergence.png"))
+# bot.send_image(os.path.join(report_dir, f"{timeid}_baysian_model_acquisition.png"))
+bot.send_image(os.path.join(report_dir, f"{timeid}_baysian_model_convergence.png"))
 
 
 
