@@ -90,8 +90,12 @@ report_dir = os.path.join( config['base_dir'], config['plot_config'], config['cu
 
 with open(os.path.join(report_dir, f"{timeid}_best_params.txt"), "a") as of:
     for ib, b in enumerate(bounds):
-        of.write(f"{b['name']} : {optimizer.x_opt[ib]}\n")
-    of.write(f"Best significance: {optimizer.fx_opt}")
+        best_value_str = f"{b['name']} : {optimizer.x_opt[ib]}\n"
+        logging.info(best_value_str)
+        of.write(best_value_str)
+    best_significance_str = f"Best significance: {optimizer.fx_opt}"
+    logging.info(best_significance_str)
+    of.write(best_significance_str)
 
 optimizer.save_evaluations(os.path.join(report_dir, f"{timeid}_baysian_model_saveopt.txt"))
 optimizer.save_report(os.path.join(report_dir, f"{timeid}_baysian_model_report.txt"))

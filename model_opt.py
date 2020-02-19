@@ -226,11 +226,11 @@ class VbsDnn():
         score_auc    = - 1. / (1 - self._train_monitor.auc_test[-1])
         # as with loss, penalize if overtraining affects the auc
         score_auc_ot = abs(self._train_monitor.auc_train[-1] - self._train_monitor.auc_test[-1])
-        logging.info(" - loss: " + score_loss)
-        logging.info(" - loss_ot: " + score_loss_ot)
-        logging.info(" - ktest: " + score_ktest)
-        logging.info(" - auc: " + score_auc)
-        logging.info(" - auc_ot: " + score_auc_ot)
+        logging.info(" - loss: "    + str(score_loss))
+        logging.info(" - loss_ot: " + str(score_loss_ot))
+        logging.info(" - ktest: "   + str(score_ktest))
+        logging.info(" - auc: "     + str(score_auc))
+        logging.info(" - auc_ot: "  + str(score_auc_ot))
         result = score_loss + score_loss_ot + score_ktest + score_auc + score_auc_ot
         logging.info("Result:  {}".format(result))
         return result
