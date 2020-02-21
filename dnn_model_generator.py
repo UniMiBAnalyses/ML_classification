@@ -24,31 +24,15 @@ logging.basicConfig(level=logging.INFO)
 
 class VbsDnn():
     def __init__ (self,
-        config, 
-        input_dim,
-        batch_size,
-        n_layers,
-        n_nodes,
-        dropout,
-        batch_norm,
-        epochs=300,
-        test_ratio=0.1,
-        val_ratio=0.2,
-        patience = (0.001, 10),
+        dataload_config = {}, 
+        model_config    = {},
         ):
 
-        self._config = deepcopy(config)
-        self.__input_dim = input_dim
-        self.__batch_size = batch_size
-        self.__epochs = epochs
+        self.__model_config    = deepcopy(model_config)
+        self.__dataload_config = deepcopy(dataload_config)
         self.__model_dir = None
-        self.__n_layers = n_layers
-        self.__n_nodes = n_nodes
-        self.__dropout = dropout
-        self.__batch_norm = batch_norm
-        self.__test_ratio = test_ratio
-        self.__val_ratio = val_ratio
-        self.__patience = patience
+
+        self.config_validation()
 
         self._data_split, self._generators = self.data_loader()
 
@@ -58,32 +42,61 @@ class VbsDnn():
 
         self._history = None
 
+    def config_validation(self):
+        model_config_keys = [
+            "input_dim",
+            "batch_size",
+            "epochs",
+            "n_layers",
+            "n_nodes",
+            "dropout",
+            "batch_norm",
+            "patience",
+            "verbose"
+        ]
+        for key in model_config_keys:
+            if key not in self.__model_config:
+                raise Exception(f"model configuration is missing the key: {key}")
+
+        dataload_config_keys = [
+            "base_dir",
+            "plot_config",
+            "cut",
+            "samples_version",
+            "cols",
+            "test_ratio",
+            "val_ratio",
+        ]
+        for key in dataload_config_keys:
+            if key not in self.__dataload_config:
+                raise Exception(f"dataload configuration is missing the key: {key}")
+
     def data_loader(self):
         '''
         This can be used also to evaluate the input variables with AVOVA F-test
         '''
         ## read data from files
         logging.debug("Loading data")
-        config_base_dir = os.path.join(self._config["base_dir"], self._config["plot_config"])
+        config_base_dir = os.path.join(self.__dataload_config["base_dir"], self.__dataload_config["plot_config"])
 
         # create the model directory
         utc_seconds = str(datetime.datetime.now().timestamp()).split(".")[0]
         logging.info(utc_seconds)
-        self.__model_dir   = os.path.join(config_base_dir, self._config["cut"] , "optimization", utc_seconds)
+        self.__model_dir   = os.path.join(config_base_dir, self.__dataload_config["cut"] , "optimization", utc_seconds)
         os.makedirs(self.__model_dir, exist_ok=True)
 
         # load numpy
-        samples_dir = os.path.join(config_base_dir, self._config["cut"] , "samples", self._config["samples_version"])
+        samples_dir = os.path.join(config_base_dir, self.__dataload_config["cut"] , "samples", self.__dataload_config["samples_version"])
         signal = pickle.load(open(os.path.join(samples_dir, "for_training/signal_balanced.pkl"),     "rb"))
         bkg    = pickle.load(open(os.path.join(samples_dir, "for_training/background_balanced.pkl"), "rb"))
 
         # Keep only the first "input-dim" columns
-        self._config["cols"] = self._config["cols"][:self.__input_dim]
-        logging.debug(self._config["cols"])
+        self.__dataload_config["cols"] = self.__dataload_config["cols"][:self.__model_config["input_dim"]]
+        logging.debug(self.__dataload_config["cols"])
 
         ## create numpy arrays
-        X_sig = signal[self._config["cols"]].values
-        X_bkg = bkg[self._config["cols"]].values
+        X_sig = signal[self.__dataload_config["cols"]].values
+        X_bkg = bkg[self.__dataload_config["cols"]].values
         Y_sig = np.ones(len(X_sig))
         Y_bkg = np.zeros(len(X_bkg))
         W_sig = (signal["weight_norm"]).values
@@ -103,9 +116,9 @@ class VbsDnn():
 
         ## Balance
         X_train, X_test, y_train, y_test, W_train, W_test , Wnn_train, Wnn_test = train_test_split(X_scaled, Y,  W, Wnn,    
-                                        test_size=self.__test_ratio, random_state=42, stratify=Y)
+                                        test_size=self.__dataload_config["test_ratio"], random_state=42, stratify=Y)
         X_train, X_val,  y_train,  y_val, W_train, W_val,   Wnn_train, Wnn_val =  train_test_split(X_train, y_train, W_train, Wnn_train, 
-                                        test_size=self.__val_ratio, random_state=42,  stratify=y_train) 
+                                        test_size=self.__dataload_config["val_ratio"], random_state=42,  stratify=y_train) 
 
         data_split = {
             "X_train": X_train,
@@ -123,9 +136,9 @@ class VbsDnn():
         }
 
         ## Oversampling
-        training_generator,   steps_per_epoch_train = balanced_batch_generator(X_train, y_train, W_train, batch_size=self.__batch_size, sampler=RandomOverSampler())
-        #validation_generator, steps_per_epoch_val   = balanced_batch_generator(X_val,   y_val,   W_val,   batch_size=self.__batch_size, sampler=RandomOverSampler()) ## test != val
-        validation_generator, steps_per_epoch_val   = balanced_batch_generator(X_val,  y_val,  W_val,   batch_size=self.__batch_size, sampler=RandomOverSampler()) ## test == val
+        training_generator,   steps_per_epoch_train = balanced_batch_generator(X_train, y_train, W_train, batch_size=self.__model_config["batch_size"], sampler=RandomOverSampler())
+        #validation_generator, steps_per_epoch_val   = balanced_batch_generator(X_val,   y_val,   W_val,   batch_size=self.__model_config["batch_size"], sampler=RandomOverSampler()) ## test != val
+        validation_generator, steps_per_epoch_val   = balanced_batch_generator(X_val,  y_val,  W_val,   batch_size=self.__model_config["batch_size"], sampler=RandomOverSampler()) ## test == val
 
         generators = {
             "training_generator": training_generator,
@@ -139,16 +152,16 @@ class VbsDnn():
     def get_model(self):
         logging.debug("Creating model")
         model = Sequential()
-        for ilay in range(self.__n_layers):
+        for ilay in range(self.__model_config["n_layers"]):
             if ilay==0:
-                model.add(Dense(self.__n_nodes, input_dim=self.__input_dim))
+                model.add(Dense(self.__model_config["n_nodes"], input_dim=self.__model_config["input_dim"]))
             else:
-                model.add(Dense(self.__n_nodes))
-            if self.__batch_norm:
+                model.add(Dense(self.__model_config["n_nodes"]))
+            if self.__model_config["batch_norm"]:
                 model.add(BatchNormalization())
             model.add(Activation("relu"))
-            if self.__dropout > 0:
-                model.add(Dropout(self.__dropout))
+            if self.__model_config["dropout"] > 0:
+                model.add(Dropout(self.__model_config["dropout"]))
         model.add(Dense(1, activation="sigmoid"))
 
         model.compile(optimizer='adam',
@@ -160,19 +173,25 @@ class VbsDnn():
     def save_metadata(self):
         ## SAVE THE MODEL, ITS METADATA AND TRAINING INFORMATIONS
 
-        # Retrieve the model metadata that should be saved
-        # dump the variables list
-        for v in self.__dict__:
-            if v.startswith("_"+self.__class__.__name__+"__"):
-                self._config[v.split("__")[1]] = getattr(self, v)
+        metadata = {
+            "data_load" : self.__dataload_config,
+            "model"     : self.__model_config,
+            "training"  : {},
+        }
+
+        # # Retrieve the model metadata that should be saved
+        # # dump the variables list
+        # for v in self.__dict__:
+        #     if v.startswith("_"+self.__class__.__name__+"__"):
+        #         self._config[v.split("__")[1]] = getattr(self, v)
             
         # dump the config
-        model_config_file = os.path.join(self.__model_dir, "model_config.yml")
+        model_config_file = os.path.join(self.__model_dir, "model_metadata.yml")
         if os.path.isfile(model_config_file):
             print("ACHTUNG! model_config_file file already existing: old file renamed with '_old'")
             os.rename(model_config_file, model_config_file[:-4] + "_old.yml")
         with open(model_config_file, "w") as out_var_file:
-            out_var_file.write(yaml.dump(self._config))  
+            out_var_file.write(yaml.dump(metadata))  
 
         # save figure with training summary
         self._train_monitor.save_figure( os.path.join(self.__model_dir, "model_train.png") )
@@ -181,19 +200,19 @@ class VbsDnn():
         self._model.save( os.path.join(self.__model_dir, "model.h5") )
 
     def fit(self):
-        early_stop = EarlyStopping(monitor='val_loss', min_delta=self.__patience[0], 
-                               patience=self.__patience[1], verbose=0)
+        early_stop = EarlyStopping(monitor='val_loss', min_delta=self.__model_config["patience"][0], 
+                               patience=self.__model_config["patience"][1], verbose=0)
 
         time0 = time.time()
         self._history = self._model.fit_generator(
-                        self._generators["training_generator"], 
-            epochs=self.__epochs,
-            steps_per_epoch  = self._generators["steps_per_epoch_train"], 
-            validation_data  = self._generators["validation_generator"], 
-            validation_steps = self._generators["steps_per_epoch_val"],
-            callbacks=[self._train_monitor, early_stop],
-            verbose=self._config["verbose"],
-            )
+                            self._generators["training_generator"], 
+                            epochs=self.__model_config["epochs"],
+                            steps_per_epoch  = self._generators["steps_per_epoch_train"], 
+                            validation_data  = self._generators["validation_generator"], 
+                            validation_steps = self._generators["steps_per_epoch_val"],
+                            callbacks=[self._train_monitor, early_stop],
+                            verbose=self.__model_config["verbose"],
+                            )
         self.__training_time = time.time() - time0
 
     def evaluate_loss(self):
@@ -237,52 +256,11 @@ class VbsDnn():
 
 ###############################################################################
 
-def test_vbsdnn_model(config):
+def evaluate_vbsdnn_model(dataload_config, model_config):
     _vbs_dnn = VbsDnn(
-        config=config,
-        input_dim=10,
-        batch_size=1024,
-        n_layers=1,
-        n_nodes=30,
-        dropout=0.4,
-        batch_norm=True,
-        epochs=3,
-        test_ratio = 0.1,
-        val_ratio = 0.2,
-        patience = (0.001, 10)
-    )
-    evaluation = _vbs_dnn.evaluate_loss()
-    return evaluation
-
-def evaluate_vbsdnn_model(config, fixed_params, x):
-    batch_size =int(x[:,0])
-    n_layers = int(x[:,1])
-    n_nodes = int(x[:,2])
-    dropout = float(x[:,3])
-    batch_norm = bool(x[:,4])
-    input_dim = int(x[:,5])
-
-    if n_nodes < input_dim:
-        n_nodes = input_dim
-
-    epochs     =fixed_params["epochs"]
-    test_ratio  =fixed_params["test_ratio"]
-    val_ratio  =fixed_params["val_ratio"]
-    patience = fixed_params["patience"]
-
-    logging.info(f"> L:{n_layers} , N:{n_nodes}, BS:{batch_size}, D:{dropout:.2f}, BN:{batch_norm}, I:{input_dim}")
-    _vbs_dnn = VbsDnn(
-        config=config,
-        input_dim = input_dim,
-        batch_size=batch_size,
-        n_layers=n_layers,
-        n_nodes=n_nodes,
-        dropout=dropout,
-        batch_norm=batch_norm,
-        test_ratio = test_ratio,
-        val_ratio = val_ratio,
-        epochs=epochs, 
-        patience = patience
+        dataload_config = dataload_config,
+        model_config    = model_config,
     )
     evaluation = _vbs_dnn.evaluate_loss()
     return evaluation, _vbs_dnn
+    

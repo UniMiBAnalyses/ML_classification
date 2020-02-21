@@ -4,7 +4,7 @@
 import logging
 from telegram_bot import TelegramLog
 
-import model_opt
+import dnn_model_generator
 
 import argparse
 import time
@@ -29,7 +29,6 @@ log.addHandler(fileh)
 bot = TelegramLog(args.bot_config)
 log.addHandler(bot)
 
-
 logging.info("=================================== Starting new training")
 
 config = {
@@ -43,15 +42,14 @@ config = {
              'Mww','PuppiMET','Lepton_flavour','R_mw','vjet_0_eta','vjet_1_eta','Zlep',
              'Zvjets_0','R_ww',
         ],
-    "verbose": 0
 }
 
-bounds = [{'name': 'batch_size', 'type': 'discrete',  'domain': (2048, 4096)},
-          {'name': 'n_layers', 'type': 'discrete',  'domain': (2,3,4,5,6)},
-          {'name': 'n_nodes', 'type': 'discrete',  'domain': (10,15,20,25,30,40,50,100,150)},
-          {'name': 'dropout', 'type': 'discrete',  'domain': (0,0.05,0.1,0.2,0.3)},
-          {'name': 'batch_norm', 'type': 'discrete',  'domain': (0,1)},
-          {'name': 'input_dim', 'type': 'discrete',  'domain': tuple(list(range(4,len(config["cols"])+1) ))},
+bounds = [{'name': 'batch_size', 'type': 'discrete', 'domain': (2048, 4096)},
+          {'name': 'n_layers',   'type': 'discrete', 'domain': (2,3,4,5,6)},
+          {'name': 'n_nodes',    'type': 'discrete', 'domain': (10,15,20,25,30,40,50,100,150)},
+          {'name': 'dropout',    'type': 'discrete', 'domain': (0,0.05,0.1,0.2,0.3)},
+          {'name': 'batch_norm', 'type': 'discrete', 'domain': (0,1)},
+          {'name': 'input_dim',  'type': 'discrete', 'domain': tuple(list(range(4,len(config["cols"])+1) ))},
          ]
 
 fixed_params={
@@ -63,7 +61,30 @@ fixed_params={
 
 ## optimizer function
 def f(x):
-    ev, vbs_dnn = dnn_model_generator.evaluate_vbsdnn_model(config, fixed_params, x)
+    n_nodes = int(x[:,2])
+    input_dim = int(x[:,5])
+
+    if n_nodes < input_dim:
+        n_nodes = input_dim
+
+    model_config   = {
+        "input_dim"  : input_dim ,
+        "batch_size" : int(x[:,0]) ,
+        "epochs"     : fixed_params["epochs"] ,
+        "n_layers"   : int(x[:,1]) ,
+        "n_nodes"    : n_nodes ,
+        "dropout"    : float(x[:,3]) ,
+        "batch_norm" : bool(x[:,4]) ,
+        "patience"   : fixed_params["patience"] ,
+        "verbose"    : False , 
+    }
+
+    config["test_ratio"] = fixed_params["test_ratio"]
+    config["val_ratio"]  = fixed_params["val_ratio"]
+
+    logging.info(f"> L:{model_config['n_layers']} , N:{model_config['n_nodes']}, BS:{model_config['batch_size']}, D:{model_config['dropout']:.2f}, BN:{model_config['batch_norm']}, I:{model_config['input_dim']}")
+
+    ev, vbs_dnn = dnn_model_generator.evaluate_vbsdnn_model(config, model_config)
     # Send image
     bot.send_image(vbs_dnn._VbsDnn__model_dir+"/model_train.png")
     return ev
@@ -75,7 +96,7 @@ optimizer = GPyOpt.methods.BayesianOptimization(f=f,
                                                 domain=bounds,
                                                 acquisition_type ='EI',       # MPI acquisition
                                                 acquisition_weight = 0.2,   # Exploration exploitation
-                                                jitter=0.1,
+                                                jitter=0.1
                                                 )
 
 logging.info(f"Running {args.n_iter} optimization")
