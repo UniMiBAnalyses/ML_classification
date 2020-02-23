@@ -19,7 +19,7 @@ import os
 import datetime
 
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class VbsDnn():
@@ -27,20 +27,18 @@ class VbsDnn():
         dataload_config = {}, 
         model_config    = {},
         ):
+        self.__model_dir = None
+        self._history = None
+        self.__training = {}
 
         self.__model_config    = deepcopy(model_config)
         self.__dataload_config = deepcopy(dataload_config)
-        self.__model_dir = None
-
         self.config_validation()
 
         self._data_split, self._generators = self.data_loader()
-
         self._model = self.get_model()
-
         self._train_monitor = dnn_plot_loss.PlotLosses(self._model, self._data_split, batch_mode=True)
 
-        self._history = None
 
     def config_validation(self):
         model_config_keys = [
@@ -82,7 +80,7 @@ class VbsDnn():
         # create the model directory
         utc_seconds = str(datetime.datetime.now().timestamp()).split(".")[0]
         logging.info(utc_seconds)
-        self.__model_dir   = os.path.join(config_base_dir, self.__dataload_config["cut"] , "optimization", utc_seconds)
+        self.__model_dir   = os.path.join(config_base_dir, self.__dataload_config["cut"] , "steps", utc_seconds)
         os.makedirs(self.__model_dir, exist_ok=True)
 
         # load numpy
@@ -134,6 +132,9 @@ class VbsDnn():
             "Wnn_test" : Wnn_test, 
             "Wnn_val" : Wnn_val, 
         }
+
+        # for dataset_name, dataset in data_split.items():
+        #     print(dataset_name + " " + str(float(dataset.nbytes) / (1024. * 1024.)))
 
         ## Oversampling
         training_generator,   steps_per_epoch_train = balanced_batch_generator(X_train, y_train, W_train, batch_size=self.__model_config["batch_size"], sampler=RandomOverSampler())
@@ -212,8 +213,10 @@ class VbsDnn():
                             validation_steps = self._generators["steps_per_epoch_val"],
                             callbacks=[self._train_monitor, early_stop],
                             verbose=self.__model_config["verbose"],
+                            use_multiprocessing=True,
+                            workers=10,
                             )
-        self.__training_time = time.time() - time0
+        self.__training["training_time"] = time.time() - time0
 
     def evaluate_loss(self):
         '''
@@ -226,32 +229,31 @@ class VbsDnn():
         '''
         logging.debug("Start Training")
         self.fit()
-        logging.debug("Saving training metadata")
-        self.save_metadata()
         ## we want a score to _minimize_
         ## the evaluation is based on the value of the loss
-        score_loss  = self._train_monitor.val_losses[-1] 
+        self.__training["loss"]  = self._train_monitor.val_losses[-1] 
         ## then we want to increase the score if the model overfits
         ## we add the difference between validation and training loss
-        score_loss_ot = abs(self._train_monitor.losses[-1] - self._train_monitor.val_losses[-1] )
+        self.__training["loss_ot"] = abs(self._train_monitor.losses[-1] - self._train_monitor.val_losses[-1] )
         ## we want to penalize the models for which the kolmogorov test fails
         ## if the test fail badly, the pval is for example 10*-15 or smaller: we add the -log, in this case +15
         ## then, we reduce this factor not to train _only_ on the kolmogorov test, but to give some importance to other factors
-        score_ktest = 0.
+        self.__training["ktest"] = 0.
         ## if self._train_monitor.kstest_sig[-1] < 0.05 or self._train_monitor.kstest_bkg[-1] < 0.05:
-        #    score_ktest =  - 0.2 * np.log(min(self._train_monitor.kstest_sig[-1],self._train_monitor.kstest_bkg[-1])) 
+        #    self.__training["ktest"] =  - 0.2 * np.log(min(self._train_monitor.kstest_sig[-1],self._train_monitor.kstest_bkg[-1])) 
         ## we want also to consider the auc. We want to encourage model with high auc
         ## we add (1-auc), with a factor to increase its importance
-        score_auc    = - 1. / (1 - self._train_monitor.auc_test[-1])
+        self.__training["auc"]    = - 1. / (1 - self._train_monitor.auc_test[-1])
         # as with loss, penalize if overtraining affects the auc
-        score_auc_ot = abs(self._train_monitor.auc_train[-1] - self._train_monitor.auc_test[-1])
-        logging.info(" - loss: "    + str(score_loss))
-        logging.info(" - loss_ot: " + str(score_loss_ot))
-        logging.info(" - ktest: "   + str(score_ktest))
-        logging.info(" - auc: "     + str(score_auc))
-        logging.info(" - auc_ot: "  + str(score_auc_ot))
-        result = score_loss + score_loss_ot + score_ktest + score_auc + score_auc_ot
+        self.__training["auc_ot"] = abs(self._train_monitor.auc_train[-1] - self._train_monitor.auc_test[-1])
+        logging.info(" - loss: "    + str(self.__training["loss"]))
+        logging.info(" - loss_ot: " + str(self.__training["loss_ot"]))
+        logging.info(" - ktest: "   + str(self.__training["ktest"]))
+        logging.info(" - auc: "     + str(self.__training["auc"]))
+        logging.info(" - auc_ot: "  + str(self.__training["auc_ot"]))
+        result = self.__training["loss"] + self.__training["loss_ot"] + self.__training["ktest"] + self.__training["auc"] + self.__training["auc_ot"]
         logging.info("Result:  {}".format(result))
+        self.save_metadata()
         return result
 
 ###############################################################################

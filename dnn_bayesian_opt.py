@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import logging
-from telegram_bot import TelegramLog
-
 import dnn_model_generator
 
+import logging
+from telegram_bot import TelegramLog
 import argparse
 import time
+import datetime
 import os
+import yaml
 
 import GPyOpt
 
@@ -31,10 +32,12 @@ log.addHandler(bot)
 
 logging.info("=================================== Starting new training")
 
+## Configuration
+
 config = {
-    "base_dir":        "/storage/vbsjjlnu",
+    "base_dir":        "/storage/vbsjjlnu", # unimib
     "plot_config":     "Full2018v6s5",
-    "cut":             "resolved",
+    "cut":             "resolved",          # unimib
     "samples_version": "v10",
     "cols": ['mjj_vbs','deltaeta_vbs','Centr_ww','Asym_vbs','A_ww',
              'Lepton_eta','mjj_vjet','vbs_0_pt','vbs_1_pt','vjet_0_pt','vjet_1_pt',
@@ -44,13 +47,14 @@ config = {
         ],
 }
 
-bounds = [{'name': 'batch_size', 'type': 'discrete', 'domain': (2048, 4096)},
-          {'name': 'n_layers',   'type': 'discrete', 'domain': (2,3,4,5,6)},
-          {'name': 'n_nodes',    'type': 'discrete', 'domain': (10,15,20,25,30,40,50,100,150)},
-          {'name': 'dropout',    'type': 'discrete', 'domain': (0,0.05,0.1,0.2,0.3)},
-          {'name': 'batch_norm', 'type': 'discrete', 'domain': (0,1)},
-          {'name': 'input_dim',  'type': 'discrete', 'domain': tuple(list(range(4,len(config["cols"])+1) ))},
-         ]
+bounds = [
+            {'name': 'batch_size', 'type': 'discrete', 'domain': (2048, 4096)},
+            {'name': 'n_layers',   'type': 'discrete', 'domain': (2,3,4,5,6)},
+            {'name': 'n_nodes',    'type': 'discrete', 'domain': (10,15,20,25,30,40,50,100,150)},
+            {'name': 'dropout',    'type': 'discrete', 'domain': (0,0.05,0.1,0.2,0.3)},
+            {'name': 'batch_norm', 'type': 'discrete', 'domain': (0,1)},
+            {'name': 'input_dim',  'type': 'discrete', 'domain': tuple(list(range(4,len(config["cols"])+1) ))},
+        ]
 
 fixed_params={
     "epochs": 200,
@@ -59,7 +63,16 @@ fixed_params={
     "patience": (0.0001, 20)
 }
 
-## optimizer function
+optimization_metadata = {
+    "dataload_config": config,
+    "domain"         : bounds,
+    "fixed"          : fixed_params,
+    "start_time_str" : str(datetime.datetime.now()) ,
+    "start_time"     : time.time()
+}
+
+## Optimization
+
 def f(x):
     n_nodes = int(x[:,2])
     input_dim = int(x[:,5])
@@ -90,8 +103,6 @@ def f(x):
     return ev
 
 logging.info("Initialization")
-# try this acquisition type
-# https://nbviewer.jupyter.org/github/SheffieldML/GPyOpt/blob/master/manual/GPyOpt_scikitlearn.ipynb
 optimizer = GPyOpt.methods.BayesianOptimization(f=f, 
                                                 domain=bounds,
                                                 acquisition_type ='EI',       # MPI acquisition
@@ -99,17 +110,27 @@ optimizer = GPyOpt.methods.BayesianOptimization(f=f,
                                                 jitter=0.1
                                                 )
 
-logging.info(f"Running {args.n_iter} optimization")
+logging.info(f"Running optimization: {args.n_iter} max iterations")
 optimizer.run_optimization(max_iter=args.n_iter)
 logging.info("=================================== Optimization ended! ")
 
-timeid = int(time.time())
+optimization_metadata["end_time"] = time.time()
+optimization_metadata["duration"] = optimization_metadata["end_time"] - optimization_metadata["start_time"]
 
 ## Save metadata about optimization
 
-report_dir = os.path.join( config['base_dir'], config['plot_config'], config['cut'] )
+report_dir = os.path.join( config['base_dir'], 
+                            config['plot_config'], 
+                            config['cut'], 
+                            "bayesian_optimizations" ,
+                            str( str(optimization_metadata["start_time"]) )
+                            )
+os.makedirs(report_dir, exist_ok=True)
 
-with open(os.path.join(report_dir, f"{timeid}_best_params.txt"), "a") as of:
+with open(os.path.join(report_dir, "optimization_metadata.yml"), "w") as out_var_file:
+    out_var_file.write(yaml.dump(optimization_metadata))  
+
+with open(os.path.join(report_dir, "best_params.txt"), "a") as of:
     for ib, b in enumerate(bounds):
         best_value_str = f"{b['name']} : {optimizer.x_opt[ib]}\n"
         logging.info(best_value_str)
@@ -118,13 +139,8 @@ with open(os.path.join(report_dir, f"{timeid}_best_params.txt"), "a") as of:
     logging.info(best_significance_str)
     of.write(best_significance_str)
 
-optimizer.save_evaluations(os.path.join(report_dir, f"{timeid}_baysian_model_saveopt.txt"))
-optimizer.save_report(os.path.join(report_dir, f"{timeid}_baysian_model_report.txt"))
-# optimizer.plot_acquisition(filename=os.path.join(report_dir, f"{timeid}_baysian_model_acquisition.png"))
-optimizer.plot_convergence(filename=os.path.join(report_dir, f"{timeid}_baysian_model_convergence.png"))
-# bot.send_image(os.path.join(report_dir, f"{timeid}_baysian_model_acquisition.png"))
-bot.send_image(os.path.join(report_dir, f"{timeid}_baysian_model_convergence.png"))
-
-
-
+optimizer.save_evaluations(os.path.join(report_dir, "baysian_model_saveopt.txt"))
+optimizer.save_report(os.path.join(report_dir, "baysian_model_report.txt"))
+optimizer.plot_convergence(filename=os.path.join(report_dir, "baysian_model_convergence.png"))
+bot.send_image(os.path.join(report_dir, "baysian_model_convergence.png"))
 
