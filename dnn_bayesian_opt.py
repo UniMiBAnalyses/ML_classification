@@ -48,7 +48,7 @@ config = {
 }
 
 bounds = [
-            {'name': 'batch_size', 'type': 'discrete', 'domain': (2048, 4096)},
+            {'name': 'batch_size', 'type': 'discrete', 'domain': (500, 1024, 1500, 2048, 3000, 4096)},
             {'name': 'n_layers',   'type': 'discrete', 'domain': (2,3,4,5,6)},
             {'name': 'n_nodes',    'type': 'discrete', 'domain': (10,15,20,25,30,40,50,100,150)},
             {'name': 'dropout',    'type': 'discrete', 'domain': (0,0.05,0.1,0.2,0.3)},
