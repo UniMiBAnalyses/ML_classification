@@ -123,7 +123,7 @@ report_dir = os.path.join( config['base_dir'],
                             config['plot_config'], 
                             config['cut'], 
                             "bayesian_optimizations" ,
-                            str( str(optimization_metadata["start_time"]) )
+                            str( int(optimization_metadata["start_time"]) )
                             )
 os.makedirs(report_dir, exist_ok=True)
 
