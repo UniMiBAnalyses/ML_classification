@@ -19,13 +19,13 @@ class PlotLosses(keras.callbacks.Callback):
     def __init__(self, model, data, batch_mode=False):
         self.model = model
         self.X_train = data["X_train"]
-        self.X_test = data["X_test"]
+        self.X_test = data["X_val"]
         self.y_train = data["y_train"]
-        self.y_test = data["y_test"]
+        self.y_test = data["y_val"]
         self.W_train = data["W_train"]
-        self.W_test = data["W_test"]
+        self.W_test = data["W_val"]  # use the validation data for plots
         self.Wnn_train = data["Wnn_train"]
-        self.Wnn_test = data["Wnn_test"]
+        self.Wnn_test = data["Wnn_val"]
         self.batch_mode = batch_mode
 
     def on_train_begin(self, logs={}):
@@ -60,8 +60,8 @@ class PlotLosses(keras.callbacks.Callback):
         self.x.append(self.i)
         self.losses.append(logs.get('loss')) #training_loss[0])
         self.val_losses.append(logs.get('val_loss'))
-        self.acc.append(logs.get('acc')) #training_loss[1])
-        self.val_acc.append(logs.get('val_acc'))
+        self.acc.append(logs.get('accuracy')) #training_loss[1])
+        self.val_acc.append(logs.get('val_accuracy'))
         self.i += 1
 
         self.pred_test_temp = self.model.predict(self.X_test, batch_size=2048)
@@ -147,3 +147,4 @@ class PlotLosses(keras.callbacks.Callback):
         if self.batch_mode:
             self.performance_plot()
         self.figure.savefig(fname)
+        plt.close(self.figure)
