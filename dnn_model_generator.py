@@ -177,7 +177,7 @@ class VbsDnn():
         metadata = {
             "data_load" : self.__dataload_config,
             "model"     : self.__model_config,
-            "training"  : {},
+            "training"  : self.__training,
         }
 
         # # Retrieve the model metadata that should be saved
@@ -218,7 +218,7 @@ class VbsDnn():
                             )
         self.__training["training_time"] = time.time() - time0
 
-    def evaluate_loss(self):
+    def evaluate_model(self):
         '''
         evaluate the model computing the score with 
         * the loss on the training set (the lower, the better. [0,1], usually ~0.6)
@@ -246,15 +246,15 @@ class VbsDnn():
         self.__training["auc"]    = - 1. / (1 - self._train_monitor.auc_test[-1])
         # as with loss, penalize if overtraining affects the auc
         self.__training["auc_ot"] = abs(self._train_monitor.auc_train[-1] - self._train_monitor.auc_test[-1])
-        logging.info(" - loss: "    + str(self.__training["loss"]))
-        logging.info(" - loss_ot: " + str(self.__training["loss_ot"]))
-        logging.info(" - ktest: "   + str(self.__training["ktest"]))
-        logging.info(" - auc: "     + str(self.__training["auc"]))
-        logging.info(" - auc_ot: "  + str(self.__training["auc_ot"]))
-        result = self.__training["loss"] + self.__training["loss_ot"] + self.__training["ktest"] + self.__training["auc"] + self.__training["auc_ot"]
-        logging.info("Result:  {}".format(result))
+        logging.debug(" - loss: "    + str(self.__training["loss"]))
+        logging.debug(" - loss_ot: " + str(self.__training["loss_ot"]))
+        logging.debug(" - ktest: "   + str(self.__training["ktest"]))
+        logging.debug(" - auc: "     + str(self.__training["auc"]))
+        logging.debug(" - auc_ot: "  + str(self.__training["auc_ot"]))
+        self.__training["score"] = self.__training["loss"] + self.__training["loss_ot"] + self.__training["ktest"] + self.__training["auc"] + self.__training["auc_ot"]
+        logging.info("Result:  {}".format(self.__training["score"]))
         self.save_metadata()
-        return result
+        return self.__training["score"]
 
 ###############################################################################
 
@@ -263,6 +263,6 @@ def evaluate_vbsdnn_model(dataload_config, model_config):
         dataload_config = dataload_config,
         model_config    = model_config,
     )
-    evaluation = _vbs_dnn.evaluate_loss()
+    evaluation = _vbs_dnn.evaluate_model()
     return evaluation, _vbs_dnn
     
