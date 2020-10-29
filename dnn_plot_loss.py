@@ -68,8 +68,8 @@ class PlotLosses(keras.callbacks.Callback):
         # in newer keras these may be 'accuracy' and 'val_accuracy'
         self.i += 1
 
-        self.pred_test_temp = self.model.predict(self.X_test, batch_size=2048)
-        self.pred_train_temp = self.model.predict(self.X_train, batch_size=2048)
+        self.pred_test_temp = self.model.predict(self.X_test, batch_size=4096)
+        self.pred_train_temp = self.model.predict(self.X_train, batch_size=4096)
         self.pred_test_temp = np.array(self.pred_test_temp).flatten()
         self.pred_train_temp = np.array(self.pred_train_temp).flatten()
         
