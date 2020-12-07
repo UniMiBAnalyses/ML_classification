@@ -88,7 +88,7 @@ def get_model(model_tag, input_dim):
         model.add(Dense(1, activation="sigmoid"))
         return model
 
-    if model_tag == "4l_64n_l2_batchnorm_relu":
+    if model_tag == "4l_64n_l2_relu_batchnorm":
         model.add(Dense(64, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
         model.add(Activation('relu'))
         model.add(BatchNormalization())
@@ -101,6 +101,53 @@ def get_model(model_tag, input_dim):
         model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
         model.add(Activation('relu'))
         model.add(BatchNormalization())
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+    
+    if model_tag == "4l_64_32n_l2_batchnorm_relu":
+        model.add(Dense(64, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(32,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(32))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(32))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+
+    if model_tag == "4l_32n_l2_batchnorm_relu":
+        model.add(Dense(32, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(32,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(32))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(32))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+
+    if model_tag == "4l_64n_l2_batchnorm_relu":
+        model.add(Dense(64, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(64))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dense(64))
+        model.add(Activation('relu'))
         model.add(Dense(1, activation="sigmoid"))
         return model
 
@@ -143,25 +190,6 @@ def get_model(model_tag, input_dim):
         model.add(Activation('relu'))
         model.add(BatchNormalization())
         model.add(Dense(256,kernel_regularizer=regularizers.l2(0.01)))
-        model.add(Activation('relu'))
-        model.add(BatchNormalization())
-        model.add(Dense(1, activation="sigmoid"))
-        return model
-
-    if model_tag == "5l_64n_l2_relu_batchnorm":
-        model.add(Dense(128, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
-        model.add(Activation('relu'))
-        model.add(BatchNormalization())
-        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
-        model.add(Activation('relu'))
-        model.add(BatchNormalization())
-        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
-        model.add(Activation('relu'))
-        model.add(BatchNormalization())
-        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
-        model.add(Activation('relu'))
-        model.add(BatchNormalization())
-        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
         model.add(Activation('relu'))
         model.add(BatchNormalization())
         model.add(Dense(1, activation="sigmoid"))
@@ -228,6 +256,63 @@ def get_model(model_tag, input_dim):
         model.add(Dense(1, activation="sigmoid"))
         return model
 
+    if model_tag == "5l_64_32n_l2_batchnorm_relu":
+        model.add(Dense(64, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation("relu")) 
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation("relu")) 
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation("relu")) 
+        model.add(Dense(32))
+        model.add(BatchNormalization())
+        model.add(Activation("relu")) 
+        model.add(Dense(32))
+        model.add(BatchNormalization())
+        model.add(Activation("relu")) 
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+
+    if model_tag == "5l_64n_l2_batchnorm_selu":
+        model.add(Dense(128, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation("selu")) 
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation("selu")) 
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation("selu")) 
+        model.add(Dense(64))
+        model.add(BatchNormalization())
+        model.add(Activation("selu")) 
+        model.add(Dense(64))
+        model.add(BatchNormalization())
+        model.add(Activation("selu")) 
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+
+    if model_tag == "5l_64n_l2_relu_batchnorm_small":
+        model.add(Dense(64, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
+        model.add(Dense(64)) #kernel_regularizer=regularizers.l2(0.01)
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
+        model.add(Dense(64))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
+        model.add(Dense(64))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+
     if model_tag == "5l_64n_l2_relu_batchnorm":
         model.add(Dense(128, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
         model.add(Activation("relu"))
@@ -244,6 +329,63 @@ def get_model(model_tag, input_dim):
         model.add(Dense(64))
         model.add(Activation("relu"))
         model.add(BatchNormalization())
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+
+    # if model_tag == "5l_64n_l2_mish_batchnorm":
+    #     model.add(Dense(128, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+    #     model.add(Activation(mish))
+    #     model.add(BatchNormalization())
+    #     model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+    #     model.add(Activation(mish))
+    #     model.add(BatchNormalization())
+    #     model.add(Dense(64)) #kernel_regularizer=regularizers.l2(0.01)
+    #     model.add(Activation(mish))
+    #     model.add(BatchNormalization())
+    #     model.add(Dense(64))
+    #     model.add(Activation(mish))
+    #     model.add(BatchNormalization())
+    #     model.add(Dense(64))
+    #     model.add(Activation(mish))
+    #     model.add(BatchNormalization())
+    #     model.add(Dense(1, activation="sigmoid"))
+    #     return model
+
+    if model_tag == "5l_64n_l2_swish_batchnorm":
+        model.add(Dense(128, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(Activation(tf.nn.swish))
+        model.add(BatchNormalization())
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(Activation(tf.nn.swish))
+        model.add(BatchNormalization())
+        model.add(Dense(64)) #kernel_regularizer=regularizers.l2(0.01)
+        model.add(Activation(tf.nn.swish))
+        model.add(BatchNormalization())
+        model.add(Dense(64))
+        model.add(Activation(tf.nn.swish))
+        model.add(BatchNormalization())
+        model.add(Dense(64))
+        model.add(Activation(tf.nn.swish))
+        model.add(BatchNormalization())
+        model.add(Dense(1, activation="sigmoid"))
+        return model
+    
+    if model_tag == "5l_64n_l2_batchnorm_swish":
+        model.add(Dense(128, input_dim=input_dim,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation(tf.nn.swish))
+        model.add(Dense(64,kernel_regularizer=regularizers.l2(0.01)))
+        model.add(BatchNormalization())
+        model.add(Activation(tf.nn.swish))
+        model.add(Dense(64)) #kernel_regularizer=regularizers.l2(0.01)
+        model.add(BatchNormalization())
+        model.add(Activation(tf.nn.swish))
+        model.add(Dense(64))
+        model.add(BatchNormalization())
+        model.add(Activation(tf.nn.swish))
+        model.add(Dense(64))
+        model.add(BatchNormalization())
+        model.add(Activation(tf.nn.swish))
         model.add(Dense(1, activation="sigmoid"))
         return model
 
