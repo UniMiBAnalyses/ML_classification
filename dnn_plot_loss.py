@@ -16,7 +16,7 @@ from scipy import stats
 # a minimal example (sort of)
 
 class PlotLosses(keras.callbacks.Callback):
-    def __init__(self, model, data, batch_mode=False):
+    def __init__(self, model, data, dnncut=0.85, batch_mode=False):
         self.model = model
         self.X_train = data["X_train"]
         self.X_test = data["X_val"]
@@ -27,6 +27,7 @@ class PlotLosses(keras.callbacks.Callback):
         self.Wnn_train = data["Wnn_train"]
         self.Wnn_test = data["Wnn_val"]
         self.batch_mode = batch_mode
+        self.dnncut = dnncut
 
     def on_train_begin(self, logs={}):
         self.i = 0
@@ -46,6 +47,8 @@ class PlotLosses(keras.callbacks.Callback):
         self.precision_train = []
         self.recall_test = []
         self.recall_train = []
+        self.f1_test = []
+        self.f1_train = []
         self.pred_train_temp=[]
         self.pred_test_temp=[]
         self.figure = None
@@ -68,8 +71,8 @@ class PlotLosses(keras.callbacks.Callback):
         # in newer keras these may be 'accuracy' and 'val_accuracy'
         self.i += 1
 
-        self.pred_test_temp = self.model.predict(self.X_test, batch_size=2048)
-        self.pred_train_temp = self.model.predict(self.X_train, batch_size=2048)
+        self.pred_test_temp = self.model.predict(self.X_test, batch_size=4096)
+        self.pred_train_temp = self.model.predict(self.X_train, batch_size=4096)
         self.pred_test_temp = np.array(self.pred_test_temp).flatten()
         self.pred_train_temp = np.array(self.pred_train_temp).flatten()
         
@@ -94,15 +97,14 @@ class PlotLosses(keras.callbacks.Callback):
         #print("W", self.W_train[self.y_train==1].shape)
         #s_tot = np.zeros(len(pred_train))
 
-        dnnout_cut = 0.85
-        TP_train = self.Wnn_train[(self.y_train==1) & (self.pred_train_temp > dnnout_cut)].sum()
-        FP_train = self.Wnn_train[(self.y_train==0) & (self.pred_train_temp > dnnout_cut)].sum() 
+        TP_train = self.Wnn_train[(self.y_train==1) & (self.pred_train_temp > self.dnncut)].sum()
+        FP_train = self.Wnn_train[(self.y_train==0) & (self.pred_train_temp > self.dnncut)].sum() 
         T_train = self.Wnn_train[(self.y_train==1)].sum()
         significance_train =  TP_train  / (np.sqrt( FP_train ))
         self.significance_train.append(significance_train)
 
-        TP_test = self.Wnn_test[(self.y_test==1) & (self.pred_test_temp > dnnout_cut)].sum()
-        FP_test = self.Wnn_test[(self.y_test==0) & (self.pred_test_temp > dnnout_cut)].sum()
+        TP_test = self.Wnn_test[(self.y_test==1) & (self.pred_test_temp > self.dnncut)].sum()
+        FP_test = self.Wnn_test[(self.y_test==0) & (self.pred_test_temp > self.dnncut)].sum()
         T_test = self.Wnn_test[(self.y_test==1)].sum()
         significance_test =  TP_test  / (np.sqrt( FP_test ))
         self.significance_test.append(significance_test)
@@ -111,6 +113,9 @@ class PlotLosses(keras.callbacks.Callback):
         self.precision_train.append(TP_train/ (TP_train+FP_train))
         self.recall_test.append(TP_test/ T_test)
         self.recall_train.append(TP_train/ T_train)
+
+        self.f1_train.append( 2* (self.precision_train[-1] * self.recall_train[-1])/ (self.precision_train[-1] + self.recall_train[-1]) )
+        self.f1_test.append( 2* (self.precision_test[-1] * self.recall_test[-1])/ (self.precision_test[-1] + self.recall_test[-1]) )
 
     def performance_plot(self):
         self.figure, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(24,10))
@@ -122,8 +127,12 @@ class PlotLosses(keras.callbacks.Callback):
         ax1.set_xlabel("epochs")
         ax1.legend()
 
-        ax2.plot(self.x, self.acc, "o-", label="accuracy (train)")
-        ax2.plot(self.x, self.val_acc, "o-", label="accuracy (val)")
+        # ax2.plot(self.x, self.acc, "o-", label="accuracy (train)")
+        # ax2.plot(self.x, self.val_acc, "o-", label="accuracy (val)")
+        # ax2.set_xlabel("epochs")
+        # ax2.legend()
+        ax2.plot(self.x, self.f1_train, "o-", label="F1 score (train) thr0.85")
+        ax2.plot(self.x, self.f1_test, "o-", label="F1 score (test) thr0.85")
         ax2.set_xlabel("epochs")
         ax2.legend()
         
